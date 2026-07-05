@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初一英語語法大富翁 Grade 7 English Grammar Monopoly</title>
+    <style>
+        :root {
+            --primary: #FF6B6B;
+            --secondary: #4ECDC4;
+            --accent: #FFE66D;
+            --dark: #2F3E46;
+            --light: #F7FFF7;
+            --success: #2ECC71;
+            --danger: #E74C3C;
+            --chance: #9b59b6;
+            --airport: #3498db;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
+
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            color: var(--dark);
+        }
+
+        #game-container {
+            width: 1580px;
+            height: 980px;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            position: relative;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10; border-radius: 20px;
+        }
+
+        #home-screen {
+            background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><path d="M0 0h30v30H0zm30 30h30v30H30z" fill="%23fff" fill-opacity=".05"/></svg>');
+            display: flex; color: white; text-align: center;
+        }
+
+        .screen.active { display: flex; }
+
+        .players-sidebar {
+            width: 410px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 100%;
+        }
+
+        .player-card {
+            background: white; border-radius: 14px; padding: 12px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08); border-left: 10px solid #ccc;
+            transition: all 0.3s ease;
+        }
+
+        .player-card.active { transform: scale(1.02); box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
+        .player-card.bankrupt-card { background: #e0e0e0 !important; border-left-color: #7f8c8d !important; color: #7f8c8d !important; opacity: 0.5; filter: grayscale(100%); }
+        
+        .p-red { border-left-color: #FF4136; }
+        .p-blue { border-left-color: #0074D9; }
+        .p-green { border-left-color: #2ECC40; }
+        .p-yellow { border-left-color: #FFDC00; }
+
+        .player-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem; margin-bottom: 4px; }
+        .player-assets { font-size: 0.9rem; color: #333; display: flex; flex-direction: column; gap: 4px; }
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; color: white; font-weight: bold; }
+        .bg-danger { background-color: var(--danger); }
+        .bg-gray { background-color: #7f8c8d; }
+
+        .bank-management {
+            margin-top: 6px; padding-top: 6px; border-top: 1px dashed #ddd;
+        }
+        .bank-title { font-size: 0.8rem; font-weight: bold; color: #2980b9; margin-bottom: 4px; }
+        .bank-actions-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+        .bank-btn {
+            padding: 2px 6px; font-size: 0.75rem; font-weight: bold; border-radius: 4px; border: 1px solid #ddd; cursor: pointer; background: #f1f2f6;
+        }
+        .bank-btn.btn-mortgage { background: #ffeaa7; color: #d35400; border-color: #e67e22; }
+        .bank-btn.btn-redeem { background: #e3f2fd; color: #1565c0; border-color: #2196f3; }
+        .bank-btn.btn-sell { background: #ffebee; color: #c62828; border-color: #ef5350; }
+
+        .game-controls {
+            background: #f8f9fa; border-radius: 14px; padding: 12px; text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-top: auto; border: 1px solid #ddd;
+        }
+
+        .board-wrapper {
+            flex-grow: 1; position: relative; background: #dfe6e9; border-radius: 14px;
+            padding: 8px; display: grid; 
+            grid-template-columns: 2.2fr repeat(8, 1.1fr) 2.2fr; 
+            grid-template-rows: 2.2fr repeat(8, 1.1fr) 2.2fr; 
+            gap: 6px;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .tile {
+            background: white; border-radius: 8px; border: 1px solid #b2bec3;
+            display: flex; position: relative; font-weight: bold; font-size: 0.85rem; overflow: hidden;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.05); transition: background-color 0.2s, transform 0.2s;
+            cursor: pointer;
+        }
+        .tile:hover { filter: brightness(0.95); }
+        
+        /* 四個方向格子的排版優化：全面包容所有資訊 */
+        .tile.dir-row { flex-direction: column; justify-content: space-between; padding: 4px; }
+        .tile.dir-col-left { flex-direction: row; justify-content: space-between; padding: 4px; }
+        .tile.dir-col-right { flex-direction: row-reverse; justify-content: space-between; padding: 4px; }
+
+        .tile.selectable {
+            cursor: pointer; box-shadow: 0 0 15px #3498db !important;
+            animation: pulse 1.2s infinite; border: 2px solid #3498db !important;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.96); opacity: 0.9; }
+            100% { transform: scale(1); }
+        }
+
+        .tile-header { background: #b2bec3; border-radius: 4px; }
+        .tile.dir-row .tile-header { height: 18px; width: 100%; margin-bottom: 2px; }
+        .tile.dir-col-left .tile-header { width: 18px; height: 100%; margin-right: 4px; }
+        .tile.dir-col-right .tile-header { width: 18px; height: 100%; margin-left: 4px; }
+
+        .tile-body { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; height: 100%; width: 100%; }
+        /* 讓左右排的文字內容與圖示垂直均勻排列 */
+        .tile.dir-col-left .tile-body, .tile.dir-col-right .tile-body { flex-direction: column; justify-content: space-between; }
+
+        .tile-info { text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; line-height: 1.2; }
+        .tile-en { font-size: 0.72rem; color: #555; font-weight: normal; }
+
+        .house-indicator { font-size: 0.8rem; color: #e67e22; text-align: center; min-height: 15px; font-weight: bold; }
+        .hotel-style { color: #d63031 !important; font-weight: bold; font-size: 0.85rem; }
+        .owner-banner { font-size: 0.72rem; color: white; padding: 1px 2px; border-radius: 3px; text-align: center; min-height: 16px; font-weight: bold; }
+
+        .token-container { 
+            position: absolute; bottom: 2px; right: 2px;
+            display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-end; align-items: center; 
+            max-width: 50px; z-index: 5;
+        }
+        .token { width: 14px; height: 14px; border-radius: 50%; border: 1px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+        .tk-0 { background-color: #FF4136; }
+        .tk-1 { background-color: #0074D9; }
+        .tk-2 { background-color: #2ECC40; }
+        .tk-3 { background-color: #FFDC00; }
+
+        .board-center {
+            grid-column: 2 / 10; grid-row: 2 / 10;
+            background: #f1f2f6; border-radius: 12px; border: 2px dashed #b2bec3;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; text-align: center;
+        }
+
+        #dice-box {
+            font-size: 3.2rem; width: 85px; height: 85px; background: var(--primary); color: white;
+            border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 10px 0;
+            box-shadow: 0 6px 0 #c0392b; user-select: none; cursor: pointer; transition: transform 0.1s;
+        }
+        #dice-box:active { transform: translateY(6px); box-shadow: none; }
+        #dice-box.disabled { background: #ccc; box-shadow: 0 6px 0 #999; cursor: not-allowed; pointer-events: none; }
+
+        .modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75); z-index: 100; display: none; align-items: center; justify-content: center; border-radius: 20px;
+        }
+        .modal-content { width: 650px; background: white; border-radius: 16px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow-y: auto; max-height: 90%; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+        
+        .opt-btn, .action-btn {
+            background: #f1f2f6; border: 1px solid #dee2e6; padding: 10px; font-size: 0.95rem; border-radius: 8px; cursor: pointer; font-weight: bold;
+        }
+        .action-btn { background: var(--secondary); color: white; border: none; padding: 10px 20px; margin: 8px; }
+        .btn-main {
+            background: var(--accent); border: none; padding: 10px 30px; font-size: 1.1rem; font-weight: bold; border-radius: 25px; cursor: pointer; box-shadow: 0 4px 0 #d4c04d;
+        }
+
+        .funds-danger { animation: flash-red 1s infinite alternate; }
+        @keyframes flash-red { from { background-color: #fff; } to { background-color: #ffcccc; } }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    
+    <!-- 主頁 / Home Screen -->
+    <div id="home-screen" class="screen active">
+        <h1 style="font-size: 2.6rem; color: var(--accent); text-shadow: 2px 2px 0 #000; margin-bottom: 10px;">英語語法大富翁：全新酒店與銀行資產版</h1>
+        <h2 style="font-size: 1.4rem; color: #fff; margin-bottom: 20px;">English Grammar Monopoly: Hotel Upgrade & Bank Management</h2>
+        <p style="font-size: 1.05rem; margin-bottom: 35px; color: #ccc; max-width: 950px; line-height: 1.6; text-align: left; padding: 0 40px;">
+            🧱 <b>格子全面優化 / Layout Optimization</b>：左右兩側格子排版完美翻新，地主條、房子與酒店圖示一目了然！<br>
+            🏨 <b>酒店瘋狂加價 / Hotel Mechanism</b>：上限可建 4 間房，到第 4 間自動變更為紅色豪華酒店，過路費全面重磅飆升！<br>
+            🏦 <b>主動銀行資訊欄 / Bank Center</b>：玩家資訊卡新增快捷處置欄。玩家可在投骰前主動辦理抵押、半價出售或支付利息贖回領地！<br>
+            📚 <b>不重複題庫 / Anti-Duplicate Quiz</b>：全題庫擴充至 45 題，引入動態熔斷機制，不抽空不重複，體驗極佳！
+        </p>
+        <button class="btn-main" onclick="initGame()">4 人聯賽即刻開戰 / Start League ⚔️</button>
+    </div>
+
+    <!-- 左側：玩家狀態與銀行資訊 / Players Sidebar & Bank Info -->
+    <div class="players-sidebar">
+        <!-- P1 -->
+        <div class="player-card p-red" id="pcard-0">
+            <div class="player-header"><span style="color:#FF4136;">🔴 P1 (Red)</span><span id="pstatus-0">進行中</span></div>
+            <div class="player-assets">
+                <div>現金: <b>$<span id="pmoney-0">3000</span></b> | 土地: <span id="plands-0">0</span> | 連錯: <span id="pwrong-0">0</span>/2</div>
+                <div class="bank-management">
+                    <div class="bank-title">🏦 銀行資產管理 / Bank Info:</div>
+                    <div class="bank-actions-grid" id="pbank-0"></div>
+                </div>
+            </div>
+        </div>
+        <!-- P2 -->
+        <div class="player-card p-blue" id="pcard-1">
+            <div class="player-header"><span style="color:#0074D9;">🔵 P2 (Blue)</span><span id="pstatus-1">進行中</span></div>
+            <div class="player-assets">
+                <div>現金: <b>$<span id="pmoney-1">3000</span></b> | 土地: <span id="plands-1">0</span> | 連錯: <span id="pwrong-1">0</span>/2</div>
+                <div class="bank-management">
+                    <div class="bank-title">🏦 銀行資產管理 / Bank Info:</div>
+                    <div class="bank-actions-grid" id="pbank-1"></div>
+                </div>
+            </div>
+        </div>
+        <!-- P3 -->
+        <div class="player-card p-green" id="pcard-2">
+            <div class="player-header"><span style="color:#2ECC40;">🟢 P3 (Green)</span><span id="pstatus-2">進行中</span></div>
+            <div class="player-assets">
+                <div>現金: <b>$<span id="pmoney-2">3000</span></b> | 土地: <span id="plands-2">0</span> | 連錯: <span id="pwrong-2">0</span>/2</div>
+                <div class="bank-management">
+                    <div class="bank-title">🏦 銀行資產管理 / Bank Info:</div>
+                    <div class="bank-actions-grid" id="pbank-2"></div>
+                </div>
+            </div>
+        </div>
+        <!-- P4 -->
+        <div class="player-card p-yellow" id="pcard-3">
+            <div class="player-header"><span style="color:#B59300;">🟡 P4 (Yellow)</span><span id="pstatus-3">進行中</span></div>
+            <div class="player-assets">
+                <div>現金: <b>$<span id="pmoney-3">3000</span></b> | 土地: <span id="plands-3">0</span> | 連錯: <span id="pwrong-3">0</span>/2</div>
+                <div class="bank-management">
+                    <div class="bank-title">🏦 銀行資產管理 / Bank Info:</div>
+                    <div class="bank-actions-grid" id="pbank-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <p style="font-weight: bold; color:#7f8c8d; margin-bottom: 2px;">當前輪次 / Current Turn</p>
+            <div id="current-player-indicator" style="font-size: 1.15rem; font-weight: bold; color:#2c3e50;">🔴 輪到玩家 1</div>
+            <p style="font-size:0.85rem; color:#e67e22; margin-top:4px;">🎲 點擊骰子前進 / Click Dice!</p>
+        </div>
+    </div>
+
+    <!-- 右側：棋盤 / Board -->
+    <div class="board-wrapper" id="board">
+        <div class="board-center">
+            <h2 style="color: #34495e; letter-spacing: 2px; font-size:1.3rem;">GRAMMAR MONOPOLY</h2>
+            <div id="dice-box" onclick="playTurn()">?</div>
+            <p id="log-box" style="font-size: 0.85rem; color: #e67e22; font-weight: bold; padding:0 5px;">點擊骰子投擲 / Click Dice</p>
+        </div>
+    </div>
+
+    <!-- 彈窗 / Modal -->
+    <div id="game-modal" class="modal">
+        <div class="modal-content" id="modal-inside"></div>
+    </div>
+
+</div>
+
+<script>
+    // 擴充至 45 題初一英語語法題庫，引入抽乾機制防重複
+    const rawQuestions = [
+        { q: "My mother _______ dinner in the kitchen at this moment.", options: ["cooks", "is cooking", "cooked", "will cook"], ans: "is cooking" },
+        { q: "Water _______ at 100 degrees Celsius.", options: ["boil", "boils", "boiled", "is boiling"], ans: "boils" },
+        { q: "Listen! The girl _______ the piano in the classroom.", options: ["plays", "played", "is playing", "will play"], ans: "is playing" },
+        { q: "He usually _______ up at 6:30 every morning.", options: ["get", "gets", "getting", "got"], ans: "gets" },
+        { q: "Look! The birds _______ in the blue sky.", options: ["fly", "flies", "are flying", "flew"], ans: "are flying" },
+        { q: "The sun _______ in the east and sets in the west.", options: ["rise", "rises", "rose", "is rising"], ans: "rises" },
+        { q: "Don't make any noise. Father _______ on the sofa.", options: ["sleeps", "slept", "is sleeping", "will sleep"], ans: "is sleeping" },
+        { q: "Tom always _______ his homework right after school.", options: ["do", "does", "did", "doing"], ans: "does" },
+        { q: "Light _______ much faster than sound.", options: ["travel", "travels", "traveled", "is traveling"], ans: "travels" },
+        { q: "She _______ not like drinking cold milk for breakfast.", options: ["do", "does", "is", "has"], ans: "does" },
+        { q: "We _______ to Hong Kong for our holiday last month.", options: ["go", "goes", "went", "will go"], ans: "went" },
+        { q: "There _______ an exciting football match next Friday.", options: ["will be", "is", "was", "has"], ans: "will be" },
+        { q: "They _______ a comprehensive English test two days ago.", options: ["have", "had", "has", "are having"], ans: "had" },
+        { q: "I _______ my grandparents living in the country next Sunday.", options: ["visit", "visited", "will visit", "visits"], ans: "will visit" },
+        { q: "Where _______ you go during the primary school graduation holiday?", options: ["do", "did", "does", "are"], ans: "did" },
+        { q: "We _______ an outdoor welcome party tomorrow evening if it doesn't rain.", options: ["hold", "held", "will hold", "holds"], ans: "will hold" },
+        { q: "What _______ you doing when I knocked at your door yesterday?", options: ["are", "were", "was", "did"], ans: "were" },
+        { q: "They _______ a movie together in the theater last night.", options: ["watch", "watches", "watched", "watching"], ans: "watched" },
+        { q: "Mr. Green _______ us English literature next term.", options: ["taught", "teaches", "will teach", "teach"], ans: "will teach" },
+        { q: "_______ is the lady standing next to our school principal?", options: ["Who", "Which", "What", "Where"], ans: "Who" },
+        { q: "_______ of these two English novels do you prefer to read?", options: ["Who", "Which", "What", "Why"], ans: "Which" },
+        { q: "_______ did you buy at the shopping center yesterday afternoon?", options: ["Who", "What", "Why", "When"], ans: "What" },
+        { q: "_______ are you crying so sadly in the corridor?", options: ["Who", "Which", "Why", "Where"], ans: "Why" },
+        { q: "_______ did you leave your English grammar textbook?", options: ["Who", "What", "Where", "When"], ans: "Where" },
+        { q: "_______ do you make a delicious chocolate cake at home?", options: ["Who", "Which", "Why", "How"], ans: "How" },
+        { q: "_______ will the matching exam take place?", options: ["Where", "Which", "What", "Why"], ans: "Where" },
+        { q: "_______ broke the window pane in the classroom?", options: ["Who", "Which", "What", "Why"], ans: "Who" },
+        { q: "_______ color do you like better, blue or green?", options: ["Who", "Which", "Why", "Where"], ans: "Which" },
+        { q: "_______ are you planning to do during the summer holiday?", options: ["Who", "What", "Why", "When"], ans: "What" },
+        // 新增題庫內容擴充容量
+        { q: "There _______ some milk and apples on the table.", options: ["is", "are", "be", "am"], ans: "is" },
+        { q: "There _______ two maps and a black board on the wall.", options: ["is", "are", "be", "was"], ans: "are" },
+        { q: "How many _______ are there in your uncle's beautiful farm?", options: ["sheep", "sheeps", "chicken", "pig"], ans: "sheep" },
+        { q: "This classroom is ours, and that one is _______.", options: ["their", "theirs", "them", "they"], ans: "theirs" },
+        { q: "May I borrow your ruler? _______ is broken.", options: ["My", "Mine", "Me", "I"], ans: "Mine" },
+        { q: "The boys enjoy _______ very much in the swimming pool.", options: ["himself", "themselves", "ourselves", "yourselves"], ans: "themselves" },
+        { q: "Would you like _______ orange juice, please?", options: ["some", "any", "many", "few"], ans: "some" },
+        { q: "I don't have _______ money in my wallet now.", options: ["some", "any", "many", "few"], ans: "any" },
+        { q: "He is good at physics. He knows _______ about it.", options: ["much", "many", "little", "few"], ans: "much" },
+        { q: "It's cold outside. You must _______ your warm coat.", options: ["put on", "take off", "wear on", "look for"], ans: "put on" },
+        { q: "My sister is afraid _______ big dogs.", options: ["of", "at", "with", "for"], ans: "of" },
+        { q: "We often go to school _______ foot every day.", options: ["by", "on", "with", "at"], ans: "on" },
+        { q: "He went to Tokyo _______ air last Sunday morning.", options: ["by", "on", "in", "take"], ans: "by" },
+        { q: "The library is open _______ 8:00 a.m. to 6:00 p.m.", options: ["from", "between", "at", "on"], ans: "from" },
+        { q: "Lily is _______ than her twin sister Lucy.", options: ["tall", "taller", "tallest", "the tallest"], ans: "taller" },
+        { q: "Which city is _______, Beijing, Shanghai or Guangzhou?", options: ["large", "larger", "the largest", "largest"], ans: "the largest" }
+    ];
+
+    let poolQuestions = [];
+
+    // 精準動態抽題，絕不重複直到全抽乾
+    function getRandomQuestion() {
+        if (poolQuestions.length === 0) { 
+            poolQuestions = [...rawQuestions]; 
+        }
+        let randIdx = Math.floor(Math.random() * poolQuestions.length);
+        let selectedQ = poolQuestions[randIdx];
+        poolQuestions.splice(randIdx, 1); // 抽走防重複
+        return selectedQ;
+    }
+
+    // 棋盤配置：整體基礎物價全面調高
+    const tilesConfig = [
+        { name: "起點 START", type: "start", group: "special" },
+        { name: "北京 Beijing", type: "city", price: 600, rent: 250, group: "red" },
+        { name: "天津 Tianjin", type: "city", price: 600, rent: 250, group: "red" },
+        { name: "機會 Chance", type: "chance", group: "special" },
+        { name: "哈爾濱 Harbin", type: "city", price: 650, rent: 280, group: "orange" },
+        { name: "瀋陽 Shenyang", type: "city", price: 650, rent: 280, group: "orange" },
+        { name: "機會 Chance", type: "chance", group: "special" },
+        { name: "大連 Dalian", type: "city", price: 700, rent: 300, group: "yellow" },
+        { name: "青島 Qingdao", type: "city", price: 700, rent: 300, group: "yellow" },
+        { name: "📌 監獄 JAIL", type: "jail", group: "special" },
+        
+        { name: "上海 Shanghai", type: "city", price: 1000, rent: 450, group: "blue" },
+        { name: "南京 Nanjing", type: "city", price: 1000, rent: 450, group: "blue" },
+        { name: "機會 Chance", type: "chance", group: "special" },
+        { name: "杭州 Hangzhou", type: "city", price: 750, rent: 320, group: "green" },
+        { name: "蘇州 Suzhou", type: "city", price: 750, rent: 320, group: "green" },
+        { name: "機會 Chance", type: "chance", group: "special" },
+        { name: "武漢 Wuhan", type: "city", price: 800, rent: 350, group: "purple" },
+        { name: "長沙 Changsha", type: "city", price: 800, rent: 350, group: "purple" },
+        { name: "✈️ 機場 AIRPORT", type: "airport", group: "special" }, 
+        { name: "廣州 Guangzhou", type: "city", price: 900, rent: 400, group: "cyan" },
+        
+        { name: "深圳 Shenzhen", type: "city", price: 900, rent: 400, group: "cyan" },
+        { name: "機會 Chance", type: "chance", group: "special" },
+        { name: "珠海 Zhuhai", type: "city", price: 620, rent: 260, group: "pink" },
+        { name: "福州 Fuzhou", type: "city", price: 620, rent: 260, group: "pink" },
+        { name: "機會 Chance", type: "chance", group: "special" },
+        { name: "廈門 Xiamen", type: "city", price: 720, rent: 310, group: "lime" },
+        { name: "桂林 Guilin", type: "city", price: 720, rent: 310, group: "lime" },
+        { name: "機會 Chance", type: "chance", group: "special" },
+        { name: "三亞 Sanya", type: "city", price: 780, rent: 340, group: "brown" },
+        { name: "成都 Chengdu", type: "city", price: 780, rent: 340, group: "brown" },
+        
+        { name: "重慶 Chongqing", type: "city", price: 850, rent: 380, group: "navy" },
+        { name: "機會 Chance", type: "chance", group: "special" },
+        { name: "西安 Xi'an", type: "city", price: 850, rent: 380, group: "navy" },
+        { name: "蘭州 Lanzhou", type: "city", price: 680, rent: 290, group: "gold" },
+        { name: "昆明 Kunming", type: "city", price: 680, rent: 290, group: "gold" },
+        { name: "機會 Chance", type: "chance", group: "special" }
+    ];
+
+    // 動態建房費初始化 (基礎 600 + 地價的 20%)
+    tilesConfig.forEach(tile => {
+        if(tile.type === 'city') {
+            tile.hCost = 600 + Math.floor(tile.price * 0.2); 
+        }
+    });
+
+    const tileCoords = [
+        [0,0], [0,1], [0,2], [0,3], [0,4], [0,5], [0,6], [0,7], [0,8], [0,9],
+        [1,9], [2,9], [3,9], [4,9], [5,9], [6,9], [7,9], [8,9], [9,9],
+        [9,8], [9,7], [9,6], [9,5], [9,4], [9,3], [9,2], [9,1], [9,0],
+        [8,0], [7,0], [6,0], [5,0], [4,0], [3,0], [2,0], [1,0]
+    ];
+
+    const groupColors = { 
+        red: "#ff4d4d", orange: "#ffa502", yellow: "#ffda79", blue: "#1e90ff", 
+        green: "#2ed573", purple: "#a55eea", cyan: "#11bbc4", pink: "#ff7b94",
+        lime: "#badc58", brown: "#d1a374", navy: "#5758bb", gold: "#f1c40f"
+    };
+
+    const chanceEvents = [
+        { text_zh: "🌟 在全國英文朗誦大賽中獲獎！獎金 +$500", text_en: "🌟 Won the National English Speech Contest! Bonus +$500", money: 500 },
+        { text_zh: "📝 語法作業未交被學校處罰！罰款 -$300", text_en: "📝 Failed to submit grammar homework! Fined -$300", money: -300 },
+        { text_zh: "💡 成功幫外國遊客流利指路！小費 +$200", text_en: "💡 Guided a foreign tourist successfully! Tip +$200", money: 200 },
+        { text_zh: "📖 購買高階英漢詞典與教材。支出 -$250", text_en: "📖 Purchased advanced English dictionary. Spent -$250", money: -250 },
+        { text_zh: "🎰 答對隱藏語法彩蛋，獲得贊助！獎金 +$400", text_en: "🎰 Solved a hidden grammar easter egg! Reward +$400", money: 400 },
+        { text_zh: "🚊 錯過高鐵補辦車票手續。損失 -$150", text_en: "🚊 Missed the bullet train. Ticket fee -$150", money: -150 }
+    ];
+
+    let players = [
+        { id: 0, name_zh: "🔴 玩家 1", name_en: "🔴 P1", money: 3500, pos: 0, lands: 0, isBankrupt: false, wrongCount: 0, inJail: false },
+        { id: 1, name_zh: "🔵 玩家 2", name_en: "🔵 P2", money: 3500, pos: 0, lands: 0, isBankrupt: false, wrongCount: 0, inJail: false },
+        { id: 2, name_zh: "🟢 玩家 3", name_en: "🟢 P3", money: 3500, pos: 0, lands: 0, isBankrupt: false, wrongCount: 0, inJail: false },
+        { id: 3, name_zh: "🟡 玩家 4", name_en: "🟡 P4", money: 3500, pos: 0, lands: 0, isBankrupt: false, wrongCount: 0, inJail: false }
+    ];
+
+    let activePlayerIdx = 0;
+    let boardOwnership = Array(36).fill(null); 
+    let boardHouses = Array(36).fill(0);       // 0~3是房子，4是酒店
+    let boardMortgaged = Array(36).fill(false); 
+    let isAirportSelecting = false; 
+    let hasRolledThisTurn = false; // 用於控管銀行欄主動操作時機
+
+    let currentDebt = { owedTo: null, amount: 0, tileIdx: null, type: "" };
+
+    window.onload = function() { renderBoard(); };
+
+    function initGame() {
+        document.getElementById('home-screen').style.display = 'none';
+        updateUI();
+    }
+
+    function renderBoard() {
+        const board = document.getElementById('board');
+        board.querySelectorAll('.tile').forEach(t => t.remove());
+
+        tilesConfig.forEach((config, index) => {
+            const tileDiv = document.createElement('div');
+            tileDiv.id = `tile-${index}`;
+            
+            const [row, col] = tileCoords[index];
+            tileDiv.style.gridRow = row + 1;
+            tileDiv.style.gridColumn = col + 1;
+
+            // 完美的四面環繞排版規則分配
+            if (row === 0 || row === 9) {
+                tileDiv.className = 'tile dir-row';
+            } else if (col === 0) {
+                tileDiv.className = 'tile dir-col-left'; 
+            } else if (col === 9) {
+                tileDiv.className = 'tile dir-col-right'; 
+            }
+
+            tileDiv.onclick = () => { 
+                if (isAirportSelecting) handleTileClick(index); 
+                else showTileInfoModal(index);
+            };
+
+            const header = document.createElement('div');
+            header.className = 'tile-header';
+            if (config.group !== 'special') header.style.backgroundColor = groupColors[config.group];
+            if (config.type === 'chance') header.style.backgroundColor = 'var(--chance)';
+            if (config.type === 'jail') header.style.backgroundColor = '#34495e';
+            if (config.type === 'airport') header.style.backgroundColor = 'var(--airport)';
+
+            const bodyDiv = document.createElement('div');
+            bodyDiv.className = 'tile-body';
+
+            const info = document.createElement('div');
+            info.className = 'tile-info';
+            
+            let names = config.name.split(' ');
+            let zhName = names[0] || '';
+            let enName = names[1] || '';
+
+            if (config.type === 'city') {
+                info.innerHTML = `<span>${zhName}</span><span class="tile-en">${enName}</span><span style="color:#d35400;font-size:0.75rem;margin-top:1px;">$${config.price}</span>`;
+            } else if (config.type === 'chance') {
+                info.innerHTML = `<span style="color:var(--chance); font-size:0.75rem;">❓機會Chance</span>`;
+            } else if (config.type === 'airport') {
+                info.innerHTML = `<span style="color:var(--airport); font-size:0.75rem;">✈️機場Airport</span>`;
+            } else {
+                info.innerHTML = `<span>${zhName}</span><span class="tile-en">${enName}</span>`;
+            }
+
+            const houseIndicator = document.createElement('div');
+            houseIndicator.className = 'house-indicator';
+            houseIndicator.id = `house-${index}`;
+
+            const ownerBanner = document.createElement('div');
+            ownerBanner.className = 'owner-banner';
+            ownerBanner.id = `owner-banner-${index}`;
+
+            const tokenArea = document.createElement('div');
+            tokenArea.className = 'token-container';
+            tokenArea.id = `token-container-${index}`;
+
+            bodyDiv.appendChild(info);
+            bodyDiv.appendChild(houseIndicator);
+            bodyDiv.appendChild(ownerBanner);
+
+            tileDiv.appendChild(header);
+            tileDiv.appendChild(bodyDiv);
+            tileDiv.appendChild(tokenArea);
+            board.appendChild(tileDiv);
+        });
+        refreshTokens();
+    }
+
+    function showTileInfoModal(index) {
+        const tile = tilesConfig[index];
+        const modal = document.getElementById('game-modal');
+        const inside = document.getElementById('modal-inside');
+        
+        let contentHtml = ``;
+        if (tile.type === 'city') {
+            let ownerId = boardOwnership[index];
+            let isM = boardMortgaged[index];
+            let ownerText = ownerId !== null ? (players[ownerId].name_zh + " " + (isM ? "[已抵押]" : "[正常營業]")) : "無主地 / Unowned";
+            let currentRent = calculateDynamicRent(index);
+            let hCount = boardHouses[index];
+            let buildStatus = hCount === 4 ? "<span class='hotel-style'>🏨 豪華大酒店 Hotel</span>" : `🏠 房屋數量: ${hCount} / 3`;
+            
+            contentHtml = `
+                <h2 style="color:${groupColors[tile.group] || '#333'}; margin-bottom:15px;">🔍 領地情報: 【${tile.name}】</h2>
+                <div style="text-align:left; font-size:1rem; line-height:1.8; background:#f8f9fa; padding:20px; border-radius:10px; margin-bottom:15px;">
+                    🪐 <b>區域組別:</b> <span style="color:${groupColors[tile.group]}; font-weight:bold;">${tile.group.toUpperCase()}</span><br>
+                    👑 <b>當前地主:</b> <b>${ownerText}</b><br>
+                    💰 <b>土地原價:</b> $${tile.price}<br>
+                    🧱 <b>建築狀態:</b> ${buildStatus} (擴建費: $${tile.hCost})<br>
+                    🚨 <b>當前過路費:</b> <b style="color:var(--danger); font-size:1.25rem;">$${currentRent}</b> ${isM ? ' (⚠️ 抵押中免付費)' : ''}
+                </div>
+            `;
+        } else {
+            contentHtml = `
+                <h2 style="color:#2c3e50; margin-bottom:15px;">🏢 特殊功能格: 【${tile.name}】</h2>
+                <p style="font-size:1.1rem; padding:20px; background:#f8f9fa; border-radius:10px;">公共功能性區域，不可被購買或建造。 / Public zone.</p>
+            `;
+        }
+        
+        inside.innerHTML = contentHtml + `<br><button class="action-btn" onclick="closeModal()">關閉情報 / Close</button>`;
+        modal.style.display = 'flex';
+    }
+
+    function refreshTokens() {
+        for(let i=0; i<36; i++) {
+            const el = document.getElementById(`token-container-${i}`);
+            if(el) el.innerHTML = '';
+        }
+        players.forEach(p => {
+            if(!p.isBankrupt) {
+                const token = document.createElement('div');
+                token.className = `token tk-${p.id}`;
+                const container = document.getElementById(`token-container-${p.pos}`);
+                if(container) container.appendChild(token);
+            }
+        });
+    }
+
+    // 計算包含了「高級酒店大加價」的過路費比例公式
+    function calculateDynamicRent(tileIdx) {
+        let tile = tilesConfig[tileIdx];
+        if (tile.type !== 'city') return 0;
+        let ownerId = boardOwnership[tileIdx];
+        if (ownerId === null || boardMortgaged[tileIdx]) return 0; 
+
+        if (players[ownerId].inJail) return 0; 
+
+        let baseRent = tile.rent; 
+        let hCount = boardHouses[tileIdx];
+        
+        let houseMultiplier = 1.0;
+        let hotelPremium = 0;
+
+        if (hCount === 4) {
+            // 酒店：在滿房(3間)的倍率上，額外暴增：最低加400，並依地價的50%疊加比例過路費
+            houseMultiplier = 1.0 + (3 * (tile.price / 250));
+            hotelPremium = 400 + Math.floor(tile.price * 0.5);
+        } else {
+            // 普通蓋房 1~3 間的加成斜率
+            houseMultiplier = 1.0 + (hCount * (tile.price / 250));
+        }
+
+        let finalRent = (baseRent * houseMultiplier) + hotelPremium;
+
+        // 同色系壟斷倍增
+        let ownAll = tilesConfig.filter(t => t.group === tile.group).every(t => boardOwnership[tilesConfig.indexOf(t)] === ownerId);
+        if (ownAll) finalRent *= 2;
+
+        return Math.floor(finalRent);
+    }
+
+    function updateUI() {
+        players.forEach(p => {
+            document.getElementById(`pmoney-${p.id}`).innerText = p.money;
+            document.getElementById(`plands-${p.id}`).innerText = p.lands;
+            document.getElementById(`pwrong-${p.id}`).innerText = p.wrongCount;
+            
+            const statusEl = document.getElementById(`pstatus-${p.id}`);
+            const cardEl = document.getElementById(`pcard-${p.id}`);
+            const bankArea = document.getElementById(`pbank-${p.id}`);
+            
+            bankArea.innerHTML = "";
+
+            if (p.isBankrupt) {
+                statusEl.innerHTML = `<span class="badge bg-danger">💀 破產</span>`;
+                cardEl.className = `player-card bankrupt-card`;
+            } else {
+                if (p.inJail) {
+                    statusEl.innerHTML = `<span class="badge bg-gray">🔒 監獄</span>`;
+                } else {
+                    statusEl.innerHTML = `進行中`;
+                }
+                cardEl.className = `player-card p-${p.id===0?'red':p.id===1?'blue':p.id===2?'green':'yellow'}`;
+
+                // 動態渲染銀行快捷資產處置按鈕 (只允許在自己回合且尚未擲骰子前執行)
+                let canManage = (activePlayerIdx === p.id && !hasRolledThisTurn && !p.inJail);
+                let hasAssets = false;
+
+                for(let i=0; i<36; i++) {
+                    if(boardOwnership[i] === p.id) {
+                        hasAssets = true;
+                        let tile = tilesConfig[i];
+                        let shortName = tile.name.split(' ')[0];
+
+                        if (boardMortgaged[i]) {
+                            // 已抵押，顯示贖回按鈕
+                            let redeemCost = Math.floor(tile.price * 1.1);
+                            let btn = document.createElement('button');
+                            btn.className = "bank-btn btn-redeem";
+                            btn.innerText = `贖 ${shortName} ($${redeemCost})`;
+                            btn.disabled = !canManage;
+                            btn.onclick = () => activeBankAction(p.id, i, 'redeem', redeemCost);
+                            bankArea.appendChild(btn);
+                        } else {
+                            // 未抵押，可選主動抵押或直接半價出售
+                            let mortgageCash = tile.price; 
+                            let sellCash = Math.floor(tile.price / 2);
+
+                            let btnM = document.createElement('button');
+                            btnM.className = "bank-btn btn-mortgage";
+                            btnM.innerText = `抵 ${shortName} (+$${mortgageCash})`;
+                            btnM.disabled = !canManage;
+                            btnM.onclick = () => activeBankAction(p.id, i, 'mortgage', mortgageCash);
+
+                            let btnS = document.createElement('button');
+                            btnS.className = "bank-btn btn-sell";
+                            btnS.innerText = `賣 ${shortName} (+$${sellCash})`;
+                            btnS.disabled = !canManage;
+                            btnS.onclick = () => activeBankAction(p.id, i, 'sell', sellCash);
+
+                            bankArea.appendChild(btnM);
+                            bankArea.appendChild(btnS);
+                        }
+                    }
+                }
+                if(!hasAssets) {
+                    bankArea.innerHTML = `<span style="font-size:0.75rem; color:#999;">暫無任何房地產</span>`;
+                }
+            }
+        });
+
+        document.querySelectorAll('.player-card:not(.bankrupt-card)').forEach(c => c.classList.remove('active'));
+        
+        if (!isAllOver()) {
+            let cardEl = document.getElementById(`pcard-${activePlayerIdx}`);
+            if(cardEl && !players[activePlayerIdx].isBankrupt) cardEl.classList.add('active');
+            
+            let currP = players[activePlayerIdx];
+            if (isAirportSelecting) {
+                document.getElementById('current-player-indicator').innerText = `✈️ 請 ${currP.name_zh} 選擇地圖任意處落點`;
+            } else {
+                document.getElementById('current-player-indicator').innerText = `👉 輪到 ${currP.name_zh} (${hasRolledThisTurn?'結算中':'投骰前'})`;
+            }
+        }
+        checkWinner();
+    }
+
+    // 銀行資訊欄主動處置函數
+    function activeBankAction(playerId, tileIdx, type, value) {
+        let p = players[playerId];
+        let tile = tilesConfig[tileIdx];
+
+        if (type === 'redeem') {
+            if (p.money < value) { alert("你的現金不足以贖回此地！"); return; }
+            p.money -= value;
+            boardMortgaged[tileIdx] = false;
+            alert(`🔓 順利贖回 ${tile.name}，重新恢復收取過路費。`);
+        } else if (type === 'mortgage') {
+            p.money += value;
+            boardMortgaged[tileIdx] = true;
+            alert(`💰 成功抵押 ${tile.name}，獲得 100% 現金 $${value}。抵押期間無法收租。`);
+        } else if (type === 'sell') {
+            if (!confirm(`確定要以半價 $${value} 永久變賣 ${tile.name} 嗎？(房屋酒店將歸零變回無主地)`)) return;
+            p.money += value;
+            p.lands -= 1;
+            boardOwnership[tileIdx] = null;
+            boardHouses[tileIdx] = 0;
+            boardMortgaged[tileIdx] = false;
+            alert(`🏪 已出售 ${tile.name}，該地變回無主荒地。`);
+        }
+        
+        syncTileVisual(tileIdx);
+        updateUI();
+    }
+
+    // 同步刷新單個格子的外觀顯示
+    function syncTileVisual(tileIdx) {
+        const banner = document.getElementById(`owner-banner-${tileIdx}`);
+        const houseEl = document.getElementById(`house-${tileIdx}`);
+        let ownerId = boardOwnership[tileIdx];
+
+        if (ownerId === null) {
+            if(banner) { banner.innerText = ""; banner.style.backgroundColor = "transparent"; }
+            if(houseEl) { houseEl.innerText = ""; houseEl.className = "house-indicator"; }
+        } else {
+            if(banner) {
+                if (boardMortgaged[tileIdx]) {
+                    banner.innerText = `P${ownerId+1} [抵押]`;
+                    banner.style.backgroundColor = "#7f8c8d";
+                } else {
+                    banner.innerText = `P${ownerId+1} 認證`;
+                    banner.style.backgroundColor = ownerId===0?'#FF4136':ownerId===1?'#0074D9':ownerId===2?'#2ECC40':'#B59300';
+                }
+            }
+            if(houseEl) {
+                let hCount = boardHouses[tileIdx];
+                if (hCount === 4) {
+                    houseEl.innerText = "🏨 HOTEL";
+                    houseEl.className = "house-indicator hotel-style";
+                } else {
+                    houseEl.innerText = "🏠".repeat(hCount);
+                    houseEl.className = "house-indicator";
+                }
+            }
+        }
+    }
+
+    function playTurn() {
+        let diceBox = document.getElementById('dice-box');
+        if (diceBox.classList.contains('disabled')) return;
+        
+        diceBox.classList.add('disabled');
+        hasRolledThisTurn = true;
+        let p = players[activePlayerIdx];
+
+        if (p.inJail) {
+            alert(`⛓️ ${p.name_zh} 本回合在監獄中，強制停賽一輪！`);
+            p.inJail = false; p.wrongCount = 0; 
+            setTimeout(() => { diceBox.classList.remove('disabled'); nextTurn(); }, 600);
+            return;
+        }
+
+        let roll = Math.floor(Math.random() * 6) + 1;
+        let count = 0;
+        const interval = setInterval(() => {
+            diceBox.innerText = Math.floor(Math.random() * 6) + 1;
+            count++;
+            if (count > 8) {
+                clearInterval(interval);
+                diceBox.innerText = roll;
+                
+                let oldPos = p.pos;
+                p.pos = (p.pos + roll) % 36;
+                
+                // 改為拿到 600 獎勵
+                if (p.pos < oldPos) {
+                    p.money += 600;
+                    document.getElementById('log-box').innerText = `繞過起點領取薪水 +$600`;
+                }
+                
+                refreshTokens();
+                setTimeout(() => { handleTileLanding(p); }, 300);
+            }
+        }, 60);
+    }
+
+    function handleTileLanding(player) {
+        let locIdx = player.pos;
+        let tile = tilesConfig[locIdx];
+
+        if (tile.type === 'start' || tile.type === 'jail') {
+            document.getElementById('log-box').innerText = `${player.name_zh} 停留在 ${tile.name}.`;
+            document.getElementById('dice-box').classList.remove('disabled');
+            nextTurn(); return;
+        }
+        if (tile.type === 'chance') {
+            triggerChance(player); return;
+        }
+        if (tile.type === 'airport') {
+            openQuizModal(player, tile, locIdx, 'airport'); return;
+        }
+
+        if (tile.type === 'city') {
+            let ownerId = boardOwnership[locIdx];
+            if (ownerId === null) {
+                openQuizModal(player, tile, locIdx, 'buy');
+            } else if (ownerId === player.id) {
+                if (boardMortgaged[locIdx]) {
+                    alert(`📋 這是你已抵押的土地，可由資產欄進行贖回才能重新營業。`);
+                    document.getElementById('dice-box').classList.remove('disabled');
+                    nextTurn();
+                } else if (boardHouses[locIdx] < 4) {
+                    openQuizModal(player, tile, locIdx, 'build');
+                } else {
+                    document.getElementById('log-box').innerText = `已建成頂級大酒店，無法再擴建！`;
+                    document.getElementById('dice-box').classList.remove('disabled');
+                    nextTurn();
+                }
+            } else {
+                if(boardMortgaged[locIdx]) {
+                    alert(`🔒 此領地已被地主抵押給銀行，免付過路費！`);
+                    document.getElementById('dice-box').classList.remove('disabled');
+                    nextTurn();
+                } else {
+                    let currentRent = calculateDynamicRent(locIdx);
+                    if (currentRent === 0) {
+                        alert(`🔒 地主 ${players[ownerId].name_zh} 正在坐牢，免收過路費！`);
+                        document.getElementById('dice-box').classList.remove('disabled');
+                        nextTurn();
+                    } else {
+                        openQuizModal(player, tile, locIdx, 'intercept');
+                    }
+                }
+            }
+        }
+    }
+
+    function triggerChance(player) {
+        let ev = chanceEvents[Math.floor(Math.random() * chanceEvents.length)];
+        
+        if (ev.money < 0) {
+            let cost = Math.abs(ev.money);
+            if (player.money < cost) {
+                currentDebt = { owedTo: "bank", amount: cost, tileIdx: null, type: "chance", text_zh: ev.text_zh, text_en: ev.text_en };
+                openRescueConsole(player);
+                return;
+            }
+        }
+
+        player.money += ev.money;
+        const modal = document.getElementById('game-modal');
+        const inside = document.getElementById('modal-inside');
+        
+        inside.innerHTML = `
+            <h2 style="color:var(--chance); margin-bottom:12px;">❓ 機會 / Chance</h2>
+            <div style="font-size: 1.1rem; font-weight: bold; margin: 20px 0; padding:15px; background:#f3f4f6; border-radius:10px; border-top: 5px solid var(--chance); text-align:left; line-height:1.6;">
+                中文: ${ev.text_zh}<br>
+                English: ${ev.text_en}
+            </div>
+            <p style="font-size:1.1rem; font-weight:bold; color: ${ev.money >= 0 ? 'var(--success)' : 'var(--danger)'};">
+                資產變動: ${ev.money >= 0 ? '+' : ''}$${ev.money}
+            </p>
+            <button class="action-btn" onclick="closeModal(); document.getElementById('dice-box').classList.remove('disabled'); nextTurn();">收下安排 / OK</button>
+        `;
+        modal.style.display = 'flex';
+    }
+
+    function openQuizModal(player, tile, tileIdx, mode) {
+        const modal = document.getElementById('game-modal');
+        const inside = document.getElementById('modal-inside');
+        
+        let qObj = getRandomQuestion();
+        let titleStr = "";
+        let subStr = "";
+        
+        if(mode === 'buy') {
+            titleStr = `🛡️ 認購考核: 【${tile.name}】`;
+            subStr = `答對獲 $50 獎金並解鎖買地權！ / Earn $50 & buy land.`;
+        } else if(mode === 'build') {
+            let isNextHotel = (boardHouses[tileIdx] === 3);
+            titleStr = isNextHotel ? `🏨 升級頂級酒店考核: 【${tile.name}】` : `🧱 增建房屋考核: 【${tile.name}】`;
+            subStr = `答對獲 $50 獎金並解鎖建造權！(升級費: $${tile.hCost})`;
+        } else if(mode === 'intercept') {
+            titleStr = `⚔️ 挑戰減免過路費: 【${tile.name}】`;
+            subStr = `答對獲 $50 且過路費減免 10%！答錯則全額支付！`;
+        } else if(mode === 'airport') {
+            titleStr = `✈️ 國際機場航線申請`;
+            subStr = `答對獲 $50 獎金並解鎖「全圖任意特權空降」！`;
+        }
+
+        inside.innerHTML = `
+            <h3 style="color:${groupColors[tile.group] || '#333'}; margin-bottom:4px;">${titleStr}</h3>
+            <p style="font-size:0.85rem; color:#666; margin-bottom:12px;">${subStr}</p>
+            <div style="font-size: 1.15rem; font-weight: bold; margin: 10px 0; background:#f8f9fa; padding:15px; border-radius:10px; border-left:5px solid #ccc; text-align:left;">
+                ${qObj.q}
+            </div>
+            <div class="options-grid" id="modal-opts"></div>
+        `;
+
+        const optsGrid = inside.querySelector('#modal-opts');
+        qObj.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'opt-btn';
+            btn.innerText = opt;
+            btn.onclick = () => {
+                inside.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
+                if (opt === qObj.ans) {
+                    btn.style.backgroundColor = 'var(--success)'; btn.style.color = 'white';
+                    player.wrongCount = 0; 
+                    player.money += 50;
+                    
+                    setTimeout(() => { 
+                        if(mode === 'buy') openPurchaseModal(player, tile, tileIdx);
+                        else if(mode === 'build') openBuildModal(player, tile, tileIdx);
+                        else if(mode === 'intercept') handleInterceptResult(player, tile, tileIdx, true);
+                        else if(mode === 'airport') handleAirportQuizResult(player, true);
+                    }, 600);
+                } else {
+                    btn.style.backgroundColor = 'var(--danger)'; btn.style.color = 'white';
+                    player.wrongCount += 1;
+                    
+                    if (player.wrongCount >= 2) {
+                        alert(`❌ 正確答案是: ${qObj.ans}\n⚠️ 連續答錯 2 題！即刻押送往【英語監獄】停賽一輪！`);
+                        player.inJail = true; player.pos = 9; 
+                        refreshTokens();
+                        setTimeout(() => { closeModal(); document.getElementById('dice-box').classList.remove('disabled'); nextTurn(); }, 1000);
+                    } else {
+                        alert(`❌ 正確答案是: ${qObj.ans}`);
+                        setTimeout(() => { 
+                            if(mode === 'intercept') handleInterceptResult(player, tile, tileIdx, false);
+                            else if(mode === 'airport') handleAirportQuizResult(player, false);
+                            else { closeModal(); document.getElementById('dice-box').classList.remove('disabled'); nextTurn(); }
+                        }, 1000);
+                    }
+                }
+            };
+            optsGrid.appendChild(btn);
+        });
+        modal.style.display = 'flex';
+    }
+
+    function handleInterceptResult(player, tile, tileIdx, isCorrect) {
+        closeModal();
+        let ownerId = boardOwnership[tileIdx];
+        let originalRent = calculateDynamicRent(tileIdx);
+        let finalRent = originalRent;
+
+        if (isCorrect) {
+            finalRent = Math.floor(originalRent * 0.90); 
+            alert(`🎉 答對了！過路費獲得九折優惠！\n應付金額: $${finalRent}`);
+        } else {
+            alert(`❌ 答錯了！全額支付過路費: $${originalRent}`);
+        }
+
+        if (player.money < finalRent) {
+            currentDebt = { owedTo: ownerId, amount: finalRent, tileIdx: tileIdx, type: "rent" };
+            openRescueConsole(player);
+        } else {
+            player.money -= finalRent;
+            if (!players[ownerId].inJail) { players[ownerId].money += finalRent; }
+            document.getElementById('dice-box').classList.remove('disabled');
+            nextTurn();
+        }
+    }
+
+    // 債務清算控制台（被迫抵押/變賣）
+    function openRescueConsole(player) {
+        const modal = document.getElementById('game-modal');
+        const inside = document.getElementById('modal-inside');
+        
+        let operationalLands = [];
+        for(let i=0; i<36; i++) {
+            if(boardOwnership[i] === player.id && !boardMortgaged[i]) {
+                operationalLands.push(i);
+            }
+        }
+
+        if (operationalLands.length === 0 && player.money < currentDebt.amount) {
+            executeBankruptcy(player);
+            return;
+        }
+
+        let targetName = currentDebt.owedTo === "bank" ? "虛擬銀行" : players[currentDebt.owedTo].name_zh;
+        
+        let html = `
+            <h2 style="color:var(--danger); margin-bottom:10px;" class="funds-danger">🚨 現金流危機 / Financial Crisis!</h2>
+            <p style="font-size:1.05rem; margin-bottom:12px;">
+                ${player.name_zh} 需要支付給 <b>${targetName}</b>：<b style="color:var(--danger); font-size:1.2rem;">$${currentDebt.amount}</b><br>
+                當前現金: <b style="color:var(--danger);">$${player.money}</b>
+            </p>
+            <div style="background:#f8f9fa; border:1px solid #ddd; padding:15px; border-radius:10px; text-align:left; max-height:220px; overflow-y:auto; margin-bottom:15px;">
+                <p style="font-weight:bold; margin-bottom:8px; color:#2c3e50;">被迫處置資產凑現：</p>
+        `;
+
+        operationalLands.forEach(idx => {
+            let tile = tilesConfig[idx];
+            let mPrice = tile.price;
+            let sPrice = Math.floor(tile.price / 2);
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:6px 0; font-size:0.9rem;">
+                    <span><b>${tile.name.split(' ')[0]}</b> (原價:$${tile.price})</span>
+                    <div>
+                        <button class="opt-btn" style="padding:4px 8px; font-size:0.8rem; background:#ffeaa7; color:#d35400;" onclick="rescueMortgage(${player.id}, ${idx})">抵押+$${mPrice}</button>
+                        <button class="opt-btn" style="padding:4px 8px; font-size:0.8rem; background:#ffcb74; color:#b33939;" onclick="rescueSell(${player.id}, ${idx})">賣出+$${sPrice}</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+            </div>
+            <button class="action-btn" id="pay-debt-btn" style="background:var(--success);" onclick="attemptPayDebt(${player.id})">湊齊了，立即付款</button>
+        `;
+
+        inside.innerHTML = html;
+        modal.style.display = 'flex';
+
+        if(player.money < currentDebt.amount) {
+            let btn = document.getElementById('pay-debt-btn');
+            if(btn) { btn.disabled = true; btn.style.background = "#ccc"; btn.innerText = "資金仍不足，請繼續變賣/抵押"; }
+        }
+    }
+
+    function rescueMortgage(playerId, tileIdx) {
+        let p = players[playerId];
+        p.money += tilesConfig[tileIdx].price;
+        boardMortgaged[tileIdx] = true;
+        syncTileVisual(tileIdx);
+        openRescueConsole(p);
+        updateUI();
+    }
+
+    function rescueSell(playerId, tileIdx) {
+        let p = players[playerId];
+        p.money += Math.floor(tilesConfig[tileIdx].price / 2);
+        p.lands -= 1;
+        boardOwnership[tileIdx] = null;
+        boardHouses[tileIdx] = 0;
+        boardMortgaged[tileIdx] = false;
+        syncTileVisual(tileIdx);
+        openRescueConsole(p);
+        updateUI();
+    }
+
+    function attemptPayDebt(playerId) {
+        let p = players[playerId];
+        if (p.money >= currentDebt.amount) {
+            p.money -= currentDebt.amount;
+            if (currentDebt.owedTo !== "bank" && currentDebt.owedTo !== null) {
+                let owner = players[currentDebt.owedTo];
+                if (!owner.inJail) owner.money += currentDebt.amount;
+            }
+            alert("🎉 欠款已結清！");
+            closeModal();
+            document.getElementById('dice-box').classList.remove('disabled');
+            nextTurn();
+        }
+    }
+
+    function executeBankruptcy(player) {
+        player.isBankrupt = true;
+        player.money = 0;
+        clearBankruptLands(player.id);
+        
+        const modal = document.getElementById('game-modal');
+        const inside = document.getElementById('modal-inside');
+
+        inside.innerHTML = `
+            <h2 style="color:var(--danger); margin-bottom:12px;">💀 宣告破產 Bankrupt!</h2>
+            <p style="font-size:1.15rem; font-weight:bold; padding:15px; background:#f8d7da; border-radius:10px;">
+                玩家 ${player.name_zh} 現金流耗盡且無資產可賣，正式宣告破產淘汰！
+            </p>
+            <button class="action-btn" style="background:var(--danger);" onclick="closeModal(); document.getElementById('dice-box').classList.remove('disabled'); nextTurn();">退出聯賽 / Exit</button>
+        `;
+        modal.style.display = 'flex';
+        updateUI();
+    }
+
+    function handleAirportQuizResult(player, isCorrect) {
+        closeModal();
+        if (isCorrect) {
+            alert(`🎉 申請成功！請點擊地圖上「任意非機場格子」實施全球空降傳送！`);
+            enterAirportSelectionMode();
+        } else {
+            alert(`❌ 申請失敗，本回合請留宿機場。`);
+            document.getElementById('dice-box').classList.remove('disabled');
+            nextTurn();
+        }
+    }
+
+    function enterAirportSelectionMode() {
+        isAirportSelecting = true;
+        document.getElementById('dice-box').classList.add('disabled'); 
+        tilesConfig.forEach((tile, index) => {
+            if (tile.type !== 'airport') {
+                const tileEl = document.getElementById(`tile-${index}`);
+                if (tileEl) tileEl.classList.add('selectable');
+            }
+        });
+        updateUI();
+    }
+
+    function handleTileClick(clickedIndex) {
+        if (!isAirportSelecting) return; 
+        
+        let tile = tilesConfig[clickedIndex];
+        if (tile.type === 'airport') return;
+
+        isAirportSelecting = false;
+        tilesConfig.forEach((t, idx) => {
+            const tileEl = document.getElementById(`tile-${idx}`);
+            if (tileEl) tileEl.classList.remove('selectable');
+        });
+
+        let p = players[activePlayerIdx];
+        let oldPos = p.pos;
+        p.pos = clickedIndex;
+
+        if (p.pos <= oldPos) {
+            p.money += 600;
+            alert(`🛫 飛越起點！獲得基礎薪資加成 $600！`);
+        }
+
+        refreshTokens();
+        document.getElementById('log-box').innerText = `✈️ ${p.name_zh} 空降降落至 【${tile.name}】！`;
+        setTimeout(() => { handleTileLanding(p); }, 300);
+    }
+
+    function openPurchaseModal(player, tile, tileIdx) {
+        const inside = document.getElementById('modal-inside');
+        inside.innerHTML = `
+            <h2 style="color:var(--success); margin-bottom:10px;">🎉 回答正確 (獎金+$50已入賬)</h2>
+            <p style="font-size: 1.1rem; margin-bottom: 12px;">
+                是否花費金額認購城市【${tile.name}】？<br>
+                土地價格: <b style="color:#e67e22;">$${tile.price}</b> | 基礎過路費: <b style="color:#e74c3c;">$${tile.rent}</b>
+            </p>
+            <p style="color:#666; font-size:0.85rem; margin-bottom:12px;">我的現金: $${player.money}</p>
+            <div>
+                <button class="action-btn" id="buy-confirm-btn" onclick="confirmBuy(${player.id}, ${tileIdx})">確認認購 / Buy 💰</button>
+                <button class="action-btn" style="background:#7f8c8d;" onclick="closeModal(); document.getElementById('dice-box').classList.remove('disabled'); nextTurn();">放棄路過 / Skip</button>
+            </div>
+        `;
+        if (player.money < tile.price) {
+            const b = document.getElementById('buy-confirm-btn');
+            b.disabled = true; b.innerText = "資金不足"; b.style.background = "#ccc";
+        }
+    }
+
+    function confirmBuy(playerId, tileIdx) {
+        let p = players[playerId];
+        p.money -= tilesConfig[tileIdx].price;
+        p.lands += 1;
+        boardOwnership[tileIdx] = playerId;
+        syncTileVisual(tileIdx);
+        closeModal(); 
+        document.getElementById('dice-box').classList.remove('disabled');
+        nextTurn();
+    }
+
+    function openBuildModal(player, tile, tileIdx) {
+        const inside = document.getElementById('modal-inside');
+        let currentHouses = boardHouses[tileIdx];
+        let isNextHotel = (currentHouses === 3);
+
+        let descText = isNextHotel ? 
+            `<b style='color:var(--danger); font-size:1.2rem;'>🏨 增建第4間房將自動升級為「豪華大酒店」</b><br>建成後過路費將獲得大幅度重磅飆升加成！` : 
+            `當前普通房屋: <b>${currentHouses} / 3</b> (上限4層變酒店)`;
+
+        inside.innerHTML = `
+            <h2 style="color:var(--success); margin-bottom:10px;">🎉 回答正確 (獎金+$50已入賬)</h2>
+            <p style="font-size: 1.1rem; margin-bottom: 12px; line-height:1.5;">
+                此地是你的領地，是否支付建築費實施升級擴建？<br>
+                ${descText}<br>
+                成比例建房費: <b style="color:#e67e22;">$${tile.hCost}</b>
+            </p>
+            <div>
+                <button class="action-btn" id="build-confirm-btn" onclick="confirmBuild(${player.id}, ${tileIdx})">確認升級 / Build 🧱</button>
+                <button class="action-btn" style="background:#7f8c8d;" onclick="closeModal(); document.getElementById('dice-box').classList.remove('disabled'); nextTurn();">保持原狀 / Skip</button>
+            </div>
+        `;
+        if (player.money < tile.hCost) {
+            const b = document.getElementById('build-confirm-btn');
+            b.disabled = true; b.innerText = "資金不足"; b.style.background = "#ccc";
+        }
+    }
+
+    function confirmBuild(playerId, tileIdx) {
+        let p = players[playerId];
+        p.money -= tilesConfig[tileIdx].hCost;
+        boardHouses[tileIdx] += 1;
+        syncTileVisual(tileIdx);
+        closeModal(); 
+        document.getElementById('dice-box').classList.remove('disabled');
+        nextTurn();
+    }
+
+    function closeModal() { document.getElementById('game-modal').style.display = 'none'; }
+
+    function nextTurn() {
+        if (isAllOver()) { checkWinner(); return; }
+        let loops = 0;
+        do {
+            activePlayerIdx = (activePlayerIdx + 1) % 4;
+            loops++;
+        } while (players[activePlayerIdx].isBankrupt && loops < 5);
+
+        hasRolledThisTurn = false; // 重置狀態，允許新玩家使用銀行管理資產
+        updateUI();
+    }
+
+    function clearBankruptLands(playerId) {
+        for(let i=0; i<36; i++) {
+            if(boardOwnership[i] === playerId) {
+                boardOwnership[i] = null; boardHouses[i] = 0; boardMortgaged[i] = false;
+                syncTileVisual(i);
+            }
+        }
+        refreshTokens();
+    }
+
+    function isAllOver() { return players.filter(p => !p.isBankrupt).length <= 1; }
+
+    function checkWinner() {
+        let alive = players.filter(p => !p.isBankrupt);
+        if (alive.length === 1) {
+            alert(`🏆 終極贏家誕生！恭喜【${alive[0].name_zh}】稱霸大富翁！`);
+            document.getElementById('dice-box').classList.add('disabled');
+            document.getElementById('current-player-indicator').innerText = `🎉 遊戲結束 Game Over!`;
+        }
+    }
+</script>
+
+</body>
+</html>
